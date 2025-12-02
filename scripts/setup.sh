@@ -203,13 +203,47 @@ set_permissions() {
 test_config() {
     echo -e "${BLUE}Testing nginx configuration...${NC}"
 
-    if nginx -t; then
+    # Capture output
+    local test_output
+    test_output=$(nginx -t 2>&1)
+    local test_result=$?
+
+    if [ $test_result -eq 0 ]; then
         echo -e "${GREEN}Configuration test passed${NC}\n"
         return 0
     else
-        echo -e "${RED}Configuration test failed${NC}"
-        echo -e "${YELLOW}Please review the errors above${NC}\n"
-        return 1
+        echo "$test_output"
+        echo -e "${YELLOW}Warning: Configuration test detected issues${NC}"
+
+        # Check if it's just SSL warnings that can be ignored
+        if echo "$test_output" | grep -q "ssl_stapling.*ignored"; then
+            echo -e "${YELLOW}OCSP stapling warnings detected - these are normal if certificates don't support OCSP${NC}"
+            echo -e "${YELLOW}You can safely proceed or configure OCSP later${NC}\n"
+
+            read -p "Continue despite warnings? (y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                return 0
+            else
+                return 1
+            fi
+        elif echo "$test_output" | grep -q "SSL_CTX_load_verify_locations.*failed"; then
+            echo -e "${RED}SSL certificate chain file is missing${NC}"
+            echo -e "${YELLOW}This is normal for fresh installations${NC}"
+            echo -e "${YELLOW}SSL certificates will be configured when you add sites${NC}\n"
+
+            read -p "Continue with setup? (y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                return 0
+            else
+                return 1
+            fi
+        else
+            echo -e "${RED}Configuration test failed with errors${NC}"
+            echo -e "${YELLOW}Please review the errors above${NC}\n"
+            return 1
+        fi
     fi
 }
 

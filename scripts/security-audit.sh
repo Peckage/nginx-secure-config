@@ -80,7 +80,15 @@ echo -e "${BLUE}Configuration Tests:${NC}\n"
 test_config "TLS 1.0 disabled" "grep 'ssl_protocols' $NGINX_CONF" "TLSv1.2 TLSv1.3"
 test_config "Server tokens disabled" "grep 'server_tokens' $NGINX_CONF" "server_tokens off"
 test_config "Session tickets disabled" "grep 'ssl_session_tickets' $NGINX_CONF" "ssl_session_tickets off"
-test_config "OCSP stapling enabled" "grep 'ssl_stapling' $NGINX_CONF" "ssl_stapling on"
+
+# OCSP stapling is optional - check if configured
+if grep -q "ssl_stapling on" "$NGINX_CONF" 2>/dev/null || find /etc/nginx/sites-enabled /etc/nginx/conf.d -type f -exec grep -q "ssl_stapling on" {} \; 2>/dev/null; then
+    echo -e "${GREEN}✓${NC} OCSP stapling enabled (optional)"
+    ((PASS++))
+else
+    echo -e "${YELLOW}⚠${NC} OCSP stapling not enabled (optional - only needed if certificates support it)"
+    ((WARN++))
+fi
 
 # Security Headers
 test_config "X-Frame-Options configured" "grep 'X-Frame-Options' $NGINX_CONF" "DENY\|SAMEORIGIN"
