@@ -1,0 +1,37 @@
+# SSL Certificates and Keys
+*.pem
+*.key
+*.crt
+*.csr
+ssl/
+*.p12
+*.pfx
+
+# Logs
+logs/
+*.log
+
+# OS Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Editor Files
+.vscode/
+.idea/
+*.sublime-*
+
+# Backup Files
+*.bak
+*.backup
+*~
+
+# Test Sites
+sites-enabled/test*
+sites-available/test*
+
+# Local Configuration
+local.conf
+*.local
