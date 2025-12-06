@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Kwik.zip Nginx Deploy Script
+# kwik.gg Nginx Deploy Script
 # Addon-style: drops config files without modifying nginx.conf
 # =============================================================================
 
@@ -16,7 +16,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${GREEN}🚀 Deploying Kwik.zip Nginx Configuration (Addon Mode)${NC}"
+echo -e "${GREEN}🚀 Deploying kwik.gg Nginx Configuration (Addon Mode)${NC}"
 echo ""
 
 # Check if running as root
@@ -32,7 +32,7 @@ if ! command -v nginx &> /dev/null; then
 fi
 
 # Create backup
-BACKUP_DIR="/etc/nginx/backup-kwikzip-$(date +%Y%m%d-%H%M%S)"
+BACKUP_DIR="/etc/nginx/backup-kwik-$(date +%Y%m%d-%H%M%S)"
 echo -e "${YELLOW}📦 Creating backup at $BACKUP_DIR${NC}"
 mkdir -p "$BACKUP_DIR"
 [ -d "$NGINX_CONF_D" ] && cp -r "$NGINX_CONF_D" "$BACKUP_DIR/" 2>/dev/null || true
@@ -40,21 +40,21 @@ mkdir -p "$BACKUP_DIR"
 
 # Create directories if needed
 mkdir -p "$NGINX_CONF_D" "$SITES_AVAILABLE" "$SITES_ENABLED"
-mkdir -p /var/log/nginx /var/www/kwik.zip
+mkdir -p /var/log/nginx /var/www/kwik.gg
 
 # Deploy conf.d files
 echo -e "${GREEN}📝 Deploying conf.d files...${NC}"
-cp "$SCRIPT_DIR/conf.d/kwikzip-ratelimit.conf" "$NGINX_CONF_D/"
-cp "$SCRIPT_DIR/conf.d/kwikzip-performance.conf" "$NGINX_CONF_D/"
-cp "$SCRIPT_DIR/conf.d/kwikzip-upstream.conf" "$NGINX_CONF_D/"
+cp "$SCRIPT_DIR/conf.d/kwik-ratelimit.conf" "$NGINX_CONF_D/"
+cp "$SCRIPT_DIR/conf.d/kwik-performance.conf" "$NGINX_CONF_D/"
+cp "$SCRIPT_DIR/conf.d/kwik-upstream.conf" "$NGINX_CONF_D/"
 
 # Deploy site config
 echo -e "${GREEN}📝 Deploying site config...${NC}"
-cp "$SCRIPT_DIR/sites-available/kwik.zip" "$SITES_AVAILABLE/"
+cp "$SCRIPT_DIR/sites-available/kwik.gg" "$SITES_AVAILABLE/"
 
 # Enable site
-echo -e "${GREEN}🔗 Enabling kwik.zip site...${NC}"
-ln -sf "$SITES_AVAILABLE/kwik.zip" "$SITES_ENABLED/kwik.zip"
+echo -e "${GREEN}🔗 Enabling kwik.gg site...${NC}"
+ln -sf "$SITES_AVAILABLE/kwik.gg" "$SITES_ENABLED/kwik.gg"
 
 # Test config
 echo -e "${YELLOW}🔍 Testing nginx configuration...${NC}"
@@ -62,8 +62,8 @@ if nginx -t 2>&1; then
     echo -e "${GREEN}✅ Configuration test passed!${NC}"
 else
     echo -e "${RED}❌ Configuration test failed! Restoring backup...${NC}"
-    rm -f "$NGINX_CONF_D/kwikzip-"*.conf
-    rm -f "$SITES_AVAILABLE/kwik.zip" "$SITES_ENABLED/kwik.zip"
+    rm -f "$NGINX_CONF_D/kwik-"*.conf
+    rm -f "$SITES_AVAILABLE/kwik.gg" "$SITES_ENABLED/kwik.gg"
     exit 1
 fi
 
@@ -72,22 +72,22 @@ echo -e "${GREEN}🔄 Reloading nginx...${NC}"
 systemctl reload nginx || systemctl restart nginx
 
 echo ""
-echo -e "${GREEN}✅ Kwik.zip deployed successfully!${NC}"
+echo -e "${GREEN}✅ kwik.gg deployed successfully!${NC}"
 echo ""
 echo "Files installed:"
-echo "  - $NGINX_CONF_D/kwikzip-ratelimit.conf"
-echo "  - $NGINX_CONF_D/kwikzip-performance.conf"
-echo "  - $NGINX_CONF_D/kwikzip-upstream.conf"
-echo "  - $SITES_AVAILABLE/kwik.zip"
-echo "  - $SITES_ENABLED/kwik.zip -> (symlink)"
+echo "  - $NGINX_CONF_D/kwik-ratelimit.conf"
+echo "  - $NGINX_CONF_D/kwik-performance.conf"
+echo "  - $NGINX_CONF_D/kwik-upstream.conf"
+echo "  - $SITES_AVAILABLE/kwik.gg"
+echo "  - $SITES_ENABLED/kwik.gg -> (symlink)"
 echo ""
 echo -e "${YELLOW}🔐 SSL Setup:${NC}"
 echo "  If you don't have SSL certs yet, run:"
-echo "  sudo certbot certonly --webroot -w /var/www/kwik.zip -d kwik.zip -d www.kwik.zip"
-echo "   - Logs: /var/log/nginx/kwikzip-*.log"
+echo "  sudo certbot certonly --webroot -w /var/www/kwik.gg -d kwik.gg -d www.kwik.gg"
+echo "   - Logs: /var/log/nginx/kwik-*.log"
 echo ""
 echo "🔐 SSL Note: Make sure you have certificates at:"
-echo "   - /etc/letsencrypt/live/kwik.zip/fullchain.pem"
-echo "   - /etc/letsencrypt/live/kwik.zip/privkey.pem"
+echo "   - /etc/letsencrypt/live/kwik.gg/fullchain.pem"
+echo "   - /etc/letsencrypt/live/kwik.gg/privkey.pem"
 echo ""
-echo "   If not, run: sudo certbot certonly --webroot -w /var/www/kwik.zip -d kwik.zip -d www.kwik.zip"
+echo "   If not, run: sudo certbot certonly --webroot -w /var/www/kwik.gg -d kwik.gg -d www.kwik.gg"
