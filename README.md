@@ -1,6 +1,6 @@
 # kwikzip-nginx
 
-Drop-in nginx configuration for [kwik.zip](https://kwik.zip) - zero-knowledge encrypted file sharing.
+Drop-in nginx configuration for [kwik.gg](https://kwik.gg) (with legacy redirects from kwik.zip) - zero-knowledge encrypted file sharing.
 
 ## Quick Deploy
 
@@ -11,8 +11,9 @@ sudo ./deploy.sh
 ```
 
 That's it. The script:
+
 1. Copies `conf.d/*.conf` files (rate limiting, performance, upstream)
-2. Copies site config to `sites-available/kwik.zip`
+2. Copies site config to `sites-available/kwik.zip` (serves kwik.gg and redirects kwik.zip)
 3. Enables the site
 4. Tests and reloads nginx
 
@@ -20,14 +21,14 @@ That's it. The script:
 
 ## What Gets Installed
 
-```
+```text
 /etc/nginx/
 ├── conf.d/
 │   ├── kwikzip-ratelimit.conf    # Rate limiting zones
 │   ├── kwikzip-performance.conf  # Timeouts & buffers for large files
 │   └── kwikzip-upstream.conf     # Upstream to Next.js app
 ├── sites-available/
-│   └── kwik.zip                  # Main site config
+│   └── kwik.zip                  # Main site config (kwik.gg primary, kwik.zip redirects)
 └── sites-enabled/
     └── kwik.zip -> ../sites-available/kwik.zip
 ```
@@ -46,7 +47,10 @@ That's it. The script:
 After deploying, if you don't have SSL certs:
 
 ```bash
-sudo certbot certonly --webroot -w /var/www/kwik.zip -d kwik.zip -d www.kwik.zip
+sudo certbot certonly --webroot -w /var/www/kwik.gg -d kwik.gg -d www.kwik.gg
+
+For legacy redirects (optional, only if you own kwik.zip):
+sudo certbot certonly --webroot -w /var/www/kwik.gg -d kwik.zip -d www.kwik.zip
 ```
 
 ## Manual Install

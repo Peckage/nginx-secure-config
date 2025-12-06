@@ -1,212 +1,25 @@
 # =============================================================================
-# Kwik.zip - Zero-Knowledge File Sharing
-# Site Configuration - Drop into /etc/nginx/sites-available/kwik.zip
-# Then symlink: ln -s /etc/nginx/sites-available/kwik.zip /etc/nginx/sites-enabled/
-#
-# REQUIRES: conf.d/kwikzip-*.conf files to be in place
+# Kwik.zip temporary redirect to Kwik.gg
+# Drop into /etc/nginx/sites-available/kwik.zip and symlink to sites-enabled
+# Requires kwik.zip certificate for HTTPS redirect
 # =============================================================================
 
-# HTTP to HTTPS redirect
+# HTTP redirect
 server {
     listen 80;
     listen [::]:80;
     server_name kwik.zip www.kwik.zip;
-
-    # Let's Encrypt challenge
-    location /.well-known/acme-challenge/ {
-        root /var/www/kwik.zip;
-    }
-
-    # Redirect everything else to HTTPS
-    location / {
-        return 301 https://$server_name$request_uri;
-    }
+    return 301 https://kwik.gg$request_uri;
 }
 
-# HTTPS server
+# HTTPS redirect (uses kwik.zip cert)
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
     server_name kwik.zip www.kwik.zip;
 
-    # SSL Certificates (Let's Encrypt)
     ssl_certificate /etc/letsencrypt/live/kwik.zip/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/kwik.zip/privkey.pem;
 
-    # Modern SSL settings
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305';
-    ssl_prefer_server_ciphers off;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 1d;
-    ssl_session_tickets off;
-
-    # Logging
-    access_log /var/log/nginx/kwikzip-access.log;
-    error_log /var/log/nginx/kwikzip-error.log warn;
-
-    # Unlimited file size (controlled by application)
-    client_max_body_size 0;
-
-    # ==========================================================================
-    # SECURITY HEADERS - Zero-Knowledge Privacy
-    # ==========================================================================
-    add_header X-Frame-Options "DENY" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "no-referrer" always;
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
-    add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=()" always;
-    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
-    add_header Cross-Origin-Opener-Policy "same-origin" always;
-    add_header Cross-Origin-Resource-Policy "same-origin" always;
-    add_header Cross-Origin-Embedder-Policy "require-corp" always;
-    add_header X-Robots-Tag "noindex, nofollow" always;
-
-    server_tokens off;
-
-    # ==========================================================================
-    # RATE LIMITING (uses zones from conf.d/kwikzip-ratelimit.conf)
-    # ==========================================================================
-    limit_req zone=kwikzip_general burst=20 nodelay;
-    limit_conn kwikzip_conn 10;
-
-    # ==========================================================================
-    # STATIC FILES - Next.js Assets
-    # ==========================================================================
-    location /_next/static/ {
-        proxy_pass http://kwikzip_app;
-        proxy_cache_valid 200 365d;
-        add_header Cache-Control "public, immutable, max-age=31536000";
-        access_log off;
-    }
-
-    location /favicon.ico {
-        proxy_pass http://kwikzip_app;
-        expires 30d;
-        access_log off;
-    }
-
-    # ==========================================================================
-    # DOWNLOAD PAGES - Maximum Privacy
-    # ==========================================================================
-    location ~ ^/d/ {
-        add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, nocache" always;
-        add_header Cache-Control "no-store, no-cache, must-revalidate, private, max-age=0" always;
-        add_header Pragma "no-cache" always;
-
-        limit_req zone=kwikzip_api burst=100 nodelay;
-
-        proxy_pass http://kwikzip_app;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-
-    # ==========================================================================
-    # API - File Upload
-    # ==========================================================================
-    location /api/upload {
-        limit_req zone=kwikzip_api burst=1000 nodelay;
-        limit_conn kwikzip_conn 50;
-        client_max_body_size 0;
-
-        # 2 hour timeouts for massive uploads
-        proxy_connect_timeout 300s;
-        proxy_send_timeout 7200s;
-        proxy_read_timeout 7200s;
-
-        # Streaming upload - no buffering
-        proxy_buffering off;
-        proxy_request_buffering off;
-        chunked_transfer_encoding on;
-
-        proxy_pass http://kwikzip_app;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_http_version 1.1;
-
-        add_header Cache-Control "no-store" always;
-    }
-
-    # ==========================================================================
-    # API - File Download
-    # ==========================================================================
-    location ~ ^/api/download/ {
-        limit_req zone=kwikzip_api burst=1000 nodelay;
-        limit_conn kwikzip_conn 50;
-
-        # Streaming download - no buffering
-        proxy_buffering off;
-        proxy_max_temp_file_size 0;
-
-        # 2 hour timeouts for massive downloads
-        proxy_connect_timeout 300s;
-        proxy_send_timeout 7200s;
-        proxy_read_timeout 7200s;
-
-        # Resumable downloads
-        proxy_force_ranges on;
-
-        proxy_pass http://kwikzip_app;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_http_version 1.1;
-
-        add_header Cache-Control "no-store" always;
-    }
-
-    # ==========================================================================
-    # API - Other endpoints
-    # ==========================================================================
-    location /api/ {
-        limit_req zone=kwikzip_api burst=100 nodelay;
-
-        proxy_pass http://kwikzip_app;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_http_version 1.1;
-
-        add_header Cache-Control "no-store" always;
-    }
-
-    # ==========================================================================
-    # MAIN APPLICATION
-    # ==========================================================================
-    location / {
-        limit_req zone=kwikzip_general burst=20 nodelay;
-
-        proxy_pass http://kwikzip_app;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-
-    # ==========================================================================
-    # SECURITY - Block Sensitive Files
-    # ==========================================================================
-    location ~ /\.(?!well-known) { deny all; }
-    location ~ /\.git { deny all; }
-    location ~ /\.env { deny all; }
-    location /uploads/ { deny all; return 404; }
-    location /data/ { deny all; return 404; }
-    location ~ \.(db|sqlite|sqlite3|log|sql)$ { deny all; return 404; }
-
-    # Error pages
-    error_page 404 /404;
-    error_page 500 502 503 504 /error;
+    return 301 https://kwik.gg$request_uri;
 }
